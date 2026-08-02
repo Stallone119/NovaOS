@@ -1,5 +1,11 @@
-export type TaskStatus = 'not_started' | 'in_progress' | 'review' | 'completed' | 'delayed'
+﻿export type TaskStatus = 'not_started' | 'in_progress' | 'review' | 'completed' | 'delayed'
 export type TaskPriority = 'critical' | 'high' | 'medium' | 'low'
+
+export interface LatestReport {
+  content: string
+  created_at: string
+  author: string | null
+}
 
 export interface Task {
   id: string
@@ -13,4 +19,5 @@ export interface Task {
   created_at: string
   updated_at: string
   profiles?: { full_name: string } | null
+  latest_report?: LatestReport | null
 }

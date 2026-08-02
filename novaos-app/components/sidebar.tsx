@@ -4,28 +4,8 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { LayoutDashboard, ListChecks, Building2, ClipboardList, LogOut } from 'lucide-react'
-
-type Role = 'executive' | 'dept_head' | 'team_member'
-
-const NAV_BY_ROLE: Record<Role, { href: string; label: string; icon: typeof LayoutDashboard }[]> = {
-  executive: [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/tasks', label: 'All Tasks', icon: ListChecks },
-    { href: '/departments', label: 'Departments', icon: Building2 },
-  ],
-  dept_head: [
-    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/tasks', label: 'Department Tasks', icon: ClipboardList },
-  ],
-  team_member: [{ href: '/', label: 'My Tasks', icon: ClipboardList }],
-}
-
-const ROLE_LABEL: Record<Role, string> = {
-  executive: 'Executive',
-  dept_head: 'Dept Head',
-  team_member: 'Team Member',
-}
+import { LogOut } from 'lucide-react'
+import { NAV_BY_ROLE, ROLE_LABEL, type Role } from '@/lib/nav'
 
 export function Sidebar({ fullName, role, department }: { fullName: string; role: Role; department: string }) {
   const pathname = usePathname()
@@ -40,7 +20,7 @@ export function Sidebar({ fullName, role, department }: { fullName: string; role
   }
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-[#E5E1D8] bg-[#0F1729] text-white">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-[#0F1729] text-white md:flex">
       <div className="border-b border-white/10 px-6 py-5">
         <div className="text-xs font-medium uppercase tracking-widest text-[#C9A227]">Nova Summit</div>
         <div className="text-lg font-semibold">2027 Tracker</div>
@@ -53,6 +33,7 @@ export function Sidebar({ fullName, role, department }: { fullName: string; role
             <Link
               key={href}
               href={href}
+              prefetch={false}
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
                 active ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
               }`}
@@ -67,7 +48,7 @@ export function Sidebar({ fullName, role, department }: { fullName: string; role
       <div className="border-t border-white/10 px-4 py-4">
         <div className="mb-3 px-2">
           <div className="truncate text-sm font-medium">{fullName}</div>
-          <div className="text-xs text-white/50">{ROLE_LABEL[role] ?? role} Â· {department}</div>
+          <div className="text-xs text-white/50">{ROLE_LABEL[role] ?? role} · {department}</div>
         </div>
         <Button
           variant="ghost"

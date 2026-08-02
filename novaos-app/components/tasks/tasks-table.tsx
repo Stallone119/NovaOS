@@ -41,6 +41,17 @@ function formatDeadline(deadline: string | null) {
   return new Date(deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function formatRelative(dateStr: string) {
+  const diffMs = Date.now() - new Date(dateStr).getTime()
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  if (days <= 0) return 'today'
+  if (days === 1) return '1 day ago'
+  if (days < 7) return `${days} days ago`
+  const weeks = Math.floor(days / 7)
+  if (weeks === 1) return '1 week ago'
+  return `${weeks} weeks ago`
+}
+
 function isOverdue(deadline: string | null, status: TaskStatus) {
   if (!deadline || status === 'completed') return false
   return new Date(deadline) < new Date(new Date().toDateString())
@@ -49,9 +60,11 @@ function isOverdue(deadline: string | null, status: TaskStatus) {
 export function TasksTable({
   initialTasks,
   showAssignee,
+  showLatestReport = false,
 }: {
   initialTasks: Task[]
   showAssignee: boolean
+  showLatestReport?: boolean
 }) {
   const [tasks, setTasks] = useState(initialTasks)
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all')
@@ -126,6 +139,7 @@ export function TasksTable({
                   <th className="px-4 py-3 font-medium">Priority</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Deadline</th>
+                  {showLatestReport && <th className="px-4 py-3 font-medium">Latest Update</th>}
                   <th className="px-4 py-3 font-medium"></th>
                 </tr>
               </thead>
@@ -163,6 +177,22 @@ export function TasksTable({
                       {formatDeadline(task.deadline)}
                       {isOverdue(task.deadline, task.status) && ' · Overdue'}
                     </td>
+                    {showLatestReport && (
+                      <td className="max-w-[220px] px-4 py-3">
+                        {task.latest_report ? (
+                          <div>
+                            <p className="truncate text-slate-700" title={task.latest_report.content}>
+                              {task.latest_report.content}
+                            </p>
+                            <p className="mt-0.5 text-xs text-slate-400">
+                              {task.latest_report.author ?? 'Unknown'} · {formatRelative(task.latest_report.created_at)}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400">No reports yet</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-right">
                       <ReportDialog task={task} onSubmitted={handleReportSubmitted} />
                     </td>
@@ -186,10 +216,24 @@ export function TasksTable({
                     {task.profiles?.full_name ?? 'Unassigned'}
                   </div>
                 )}
-                <div className={`mb-3 text-xs ${isOverdue(task.deadline, task.status) ? 'font-medium text-red-600' : 'text-slate-500'}`}>
+                <div className={`mb-2 text-xs ${isOverdue(task.deadline, task.status) ? 'font-medium text-red-600' : 'text-slate-500'}`}>
                   Due {formatDeadline(task.deadline)}
                   {isOverdue(task.deadline, task.status) && ' · Overdue'}
                 </div>
+                {showLatestReport && (
+                  <div className="mb-3 rounded-md bg-slate-50 px-2.5 py-2 text-xs">
+                    {task.latest_report ? (
+                      <>
+                        <p className="text-slate-700">{task.latest_report.content}</p>
+                        <p className="mt-0.5 text-slate-400">
+                          {task.latest_report.author ?? 'Unknown'} · {formatRelative(task.latest_report.created_at)}
+                        </p>
+                      </>
+                    ) : (
+                      <span className="text-slate-400">No reports yet</span>
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Select
                     value={task.status}

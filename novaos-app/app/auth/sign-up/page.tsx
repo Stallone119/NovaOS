@@ -32,7 +32,7 @@ export default function SignupPage() {
       password,
       options: {
         data: { full_name: fullName, department, role },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
       },
     })
     setLoading(false)
