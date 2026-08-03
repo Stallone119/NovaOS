@@ -2,16 +2,15 @@
 import { getUserProfile } from '@/lib/supabase/get-profile'
 import { createClient } from '@/lib/supabase/server'
 import { departmentFromSlug } from '@/lib/departments'
-import { TasksTable } from '@/components/tasks/tasks-table'
-import type { Task, LatestReport } from '@/lib/types'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DEPARTMENTS } from '@/lib/departments'
 
-export default async function DepartmentDetailPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params
+export default async function DepartmentDetailPage({ params }: { params: { slug: string } }) {
   const profile = await getUserProfile()
   if (!profile) redirect('/auth/login')
   if (profile.role === 'team_member') redirect('/')
 
-  const department = departmentFromSlug(slug)
+  const department = departmentFromSlug(params.slug)
   if (!department) notFound()
 
   if (profile.role === 'dept_head' && profile.department !== department) {
@@ -19,58 +18,80 @@ export default async function DepartmentDetailPage({ params }: { params: Promise
   }
 
   const supabase = await createClient()
-  const { data: rawTasks } = await supabase
+  
+  // Get tasks for this department
+  const { data: tasks } = await supabase
     .from('tasks')
-    .select('*, profiles:assigned_to(full_name)')
+    .select('*')
     .eq('department', department)
     .order('deadline', { ascending: true })
 
-  const tasks = (rawTasks as Task[]) ?? []
-  const taskIds = tasks.map((t) => t.id)
-
-  let latestByTask = new Map<string, LatestReport>()
-
-  if (taskIds.length > 0) {
-    const { data: reports } = await supabase
-      .from('reports')
-      .select('task_id, content, created_at, profiles:user_id(full_name)')
-      .in('task_id', taskIds)
-      .order('created_at', { ascending: false })
-
-    // ✅ FIXED: Use 'any[]' to completely bypass TypeScript checking
-    for (const r of (reports ?? []) as any[]) {
-      if (!latestByTask.has(r.task_id)) {
-        // Safely get author name - handles both array and object
-        let author = null
-        if (r.profiles) {
-          if (Array.isArray(r.profiles) && r.profiles.length > 0) {
-            author = r.profiles[0].full_name
-          } else if (r.profiles.full_name) {
-            author = r.profiles.full_name
-          }
-        }
-        
-        latestByTask.set(r.task_id, {
-          content: r.content,
-          created_at: r.created_at,
-          author: author,
-        })
-      }
-    }
-  }
-
-  const tasksWithReports = tasks.map((t) => ({
-    ...t,
-    latest_report: latestByTask.get(t.id) ?? null,
-  }))
+  const taskList = tasks ?? []
+  const totalTasks = taskList.length
+  const completedTasks = taskList.filter((t: any) => t.status === 'completed').length
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">{department}</h1>
-        <p className="mt-1 text-sm text-slate-500">All tasks and current status for this department.</p>
+        <p className="mt-1 text-sm text-slate-500">
+          {totalTasks} tasks • {completedTasks} completed
+        </p>
       </div>
-      <TasksTable initialTasks={tasksWithReports} showAssignee showLatestReport />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-3xl font-semibold text-slate-900">{totalTasks}</div>
+            <div className="mt-1 text-sm text-slate-500">Total Tasks</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-3xl font-semibold text-green-600">{completedTasks}</div>
+            <div className="mt-1 text-sm text-slate-500">Completed</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-3xl font-semibold text-yellow-600">{totalTasks - completedTasks}</div>
+            <div className="mt-1 text-sm text-slate-500">In Progress</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Tasks</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {taskList.length === 0 ? (
+            <p className="text-sm text-slate-500">No tasks for this department yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {taskList.map((task: any) => (
+                <div key={task.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{task.title}</p>
+                    {task.description && (
+                      <p className="text-xs text-slate-500">{task.description}</p>
+                    )}
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    task.status === 'completed' ? 'bg-green-100 text-green-700' :
+                    task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                    task.status === 'review' ? 'bg-yellow-100 text-yellow-700' :
+                    task.status === 'delayed' ? 'bg-red-100 text-red-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {task.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
