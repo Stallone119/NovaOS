@@ -37,7 +37,7 @@ export default async function DepartmentDetailPage({ params }: { params: Promise
       .in('task_id', taskIds)
       .order('created_at', { ascending: false })
 
-    // ✅ SIMPLEST FIX: Use 'any' to bypass TypeScript entirely
+    // ✅ FIXED: Use 'any[]' to completely bypass TypeScript checking
     for (const r of (reports ?? []) as any[]) {
       if (!latestByTask.has(r.task_id)) {
         // Safely get author name - handles both array and object
