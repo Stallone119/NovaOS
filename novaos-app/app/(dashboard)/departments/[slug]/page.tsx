@@ -37,21 +37,18 @@ export default async function DepartmentDetailPage({ params }: { params: Promise
       .in('task_id', taskIds)
       .order('created_at', { ascending: false })
 
-    // ✅ FIXED: Use 'unknown' to bypass type checking
-    // Supabase returns profiles as an array, not a single object
-    const typedReports = (reports ?? []) as unknown as {
-      task_id: string
-      content: string
-      created_at: string
-      profiles: { full_name: string }[] | null
-    }[]
-
-    for (const r of typedReports) {
+    // ✅ SIMPLEST FIX: Use 'any' to bypass TypeScript entirely
+    for (const r of (reports ?? []) as any[]) {
       if (!latestByTask.has(r.task_id)) {
-        // ✅ Get the first profile from the array
-        const author = r.profiles && r.profiles.length > 0 
-          ? r.profiles[0].full_name 
-          : null
+        // Safely get author name - handles both array and object
+        let author = null
+        if (r.profiles) {
+          if (Array.isArray(r.profiles) && r.profiles.length > 0) {
+            author = r.profiles[0].full_name
+          } else if (r.profiles.full_name) {
+            author = r.profiles.full_name
+          }
+        }
         
         latestByTask.set(r.task_id, {
           content: r.content,
